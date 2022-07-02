@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.Spring.DampingRatioHighBouncy
 import androidx.compose.animation.core.Spring.StiffnessHigh
 import androidx.compose.animation.core.Spring.StiffnessLow
 import androidx.compose.animation.core.Spring.StiffnessVeryLow
@@ -21,16 +22,20 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import com.debduttapanda.jetpackcomposeanimate.ui.theme.JetpackComposeAnimateTheme
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -43,8 +48,9 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = Color.White
                 ) {
-                    val minWidth = 32f
-                    val maxWidth = 200f
+                    var job by remember { mutableStateOf<Job?>(null) }
+                    val minWidth = 300f
+                    val maxWidth = 1150f
                     val width = remember { Animatable(minWidth) }
                     val scope = rememberCoroutineScope()
                     var growing by remember { mutableStateOf(false) }
@@ -56,22 +62,17 @@ class MainActivity : ComponentActivity() {
                            modifier = Modifier
                                .padding(12.dp)
                                .height(64.dp)
-                               .width(width.value.dp)
-                               /*.clip(
-                                   shape = RoundedCornerShape(8.dp)
-                               )
-                               .background(
-                                   color = Color.Blue
-                               )*/
+                               //.width((width.value/density.density).dp)
+                               .fillMaxWidth()
                                .clickable {
                                    growing = !growing
-                                   scope.launch {
+                                   job?.cancel()//cancel the ongoing if any
+                                   job = scope.launch {
                                        width.animateTo(
                                            if (growing) maxWidth else minWidth,
                                            spring(
-                                               dampingRatio = 0.35f,
+                                               dampingRatio = DampingRatioHighBouncy,
                                                stiffness = StiffnessLow
-
                                            )
                                        )
                                    }
@@ -85,17 +86,16 @@ class MainActivity : ComponentActivity() {
                            ){
                                var x = 0f
                                var height = size.height
-                               val count = 10
-                               val dx = size.width.toFloat()/count.toFloat()
+                               val count = 15
+                               val dx = width.value/count.toFloat()
+                               val stroke = 4f
                                repeat(count){
-                                   val y1 = if(it%2==1) height.toFloat() else 0f
-                                   val y2 = height - y1
                                    drawArc(
                                        color = Color.Blue,
                                        topLeft = Offset(x+it*(dx*2f/3f),0f),
                                        size = Size(dx,height.toFloat()),
                                        style = Stroke(
-                                           2f
+                                           stroke
                                        ),
                                        startAngle = 0f,
                                        sweepAngle = when(it){
@@ -104,16 +104,16 @@ class MainActivity : ComponentActivity() {
                                                             },
                                        useCenter = false
                                    )
-                                   if(it<count-1){
+                                   if(it<count){
                                        drawArc(
                                            color = Color.Blue,
                                            topLeft = Offset(x+(2*dx/3f)*(it+1),0f),
                                            size = Size(dx/3f,height.toFloat()),
                                            style = Stroke(
-                                               2f
+                                               stroke
                                            ),
                                            startAngle = 0f,
-                                           sweepAngle = 180f,
+                                           sweepAngle = if(it==count-1) 90f else 180f,
                                            useCenter = false
                                        )
                                    }
